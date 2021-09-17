@@ -1,0 +1,25 @@
+{
+	"name": "FlashBrowser-001",
+	"main": "app/index.html",
+
+    "chromium-args": "--enable-file-cookies --allow-running-insecure-content --ignore-certificate-errors",
+    "webview": {
+        "partitions": [
+            {
+                "name": "trusted",
+                "accessible_resources": [
+                    "<all_urls>"
+                ]
+            }
+        ]
+    },
+    "window": {
+        "title": "Flash Browser",
+        "icon": "icon.png",
+        "width": 1024,
+        "height": 768,
+        "toolbar": true,
+        "frame": true
+    },
+    "dependencies": {}
+}
