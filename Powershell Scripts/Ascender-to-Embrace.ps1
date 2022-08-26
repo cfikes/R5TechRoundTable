@@ -57,6 +57,7 @@ Import-CSV -Path $ImportCSV -Header "Student ID","State Student ID (SSN)","Stude
 		switch($_."504") {
 			"No" { $Has504 = "0" }
 			"Yes" { $Has504 = "1" }
+			Default { $Has504 = "" }
 		}
 		$csvRow | Add-Member -NotePropertyName "Has504" -NotePropertyValue $Has504
 		# HasMTSS
