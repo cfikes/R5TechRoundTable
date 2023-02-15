@@ -53,13 +53,19 @@ $BilledLines =@()
 $Counter=0
 foreach ($line in $lines) {
     # SKip Verizons Incorrect Formatting
-    if($Counter -gt 4 -and $Counter -lt ($LineLength - 2)) {
+    if($Counter -gt 6 -and $Counter -lt ($LineLength - 2)) {
 
         $MTNUserArray =  $line.'Number/User'.Split("/")
         $MTN = $MTNUserArray[0].Trim()
-        $MTNNameArray = $MTNUserArray[1].trim().Split(" ")
-        $LastName = $MTNNameArray[1].Trim()
-        $FirstName = $MTNNameArray[0].Trim()
+        if ($MTNUserArray[1] -ne $null) {
+            $MTNNameArray = $MTNUserArray[1].trim().Split(" ")
+            $LastName = $MTNNameArray[1].Trim()
+            $FirstName = $MTNNameArray[0].Trim()
+        } else {
+            $LastName = "NO_LAST_NAME"
+            $FirstName = $MTNNameArray[0].Trim()
+        }
+        
 
         if ($MTN -ne $null) {
             $BilledLine = New-Object -TypeName psobject
