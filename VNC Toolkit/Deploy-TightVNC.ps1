@@ -43,14 +43,27 @@ $DeploymentSMB = "\\$($ComputerName)\" + $($DeploymentCache.replace(':','$'))
 $CurrentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if ($CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -ne "True") {
     Write-Host "Attempting to elevate privileges."
-    Try {
-        Start-Process Powershell.exe $MyInvocation.MyCommand.Path -Verb RunAs
+    if($Remove.IsPresent) {
+        Try {
+            Start-Process Powershell.exe $MyInvocation.MyCommand.Path -ArgumentList "-ComputerName $($ComputerName) -Remove" -Verb RunAs 
+        }
+        Catch {
+            Write-Host "Could Not Elevate Privileges."
+            Write-Host "Cannot run from standard user prompt, please run as administrator."
+            exit
+        }
+    } else {
+        Try {
+            Start-Process Powershell.exe $MyInvocation.MyCommand.Path -ArgumentList "-ComputerName $($ComputerName) -VNCPassword `"$($VNCPassword)`"" -Verb RunAs
+        }
+        Catch {
+            Write-Host "Could Not Elevate Privileges."
+            Write-Host "Cannot run from standard user prompt, please run as administrator."
+            exit
+        } 
     }
-    Catch {
-        Write-Host "Could Not Elevate Privileges."
-        Write-Host "Cannot run from standard user prompt, please run as administrator."
-    } 
-    exit
+    
+    
 }
 
 if($Remove){
