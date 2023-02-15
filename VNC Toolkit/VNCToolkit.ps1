@@ -34,6 +34,7 @@ $MainWindow = [Windows.Markup.XamlReader]::Load($XAMLReader)
 # Create UI Elements
 $XAML.SelectNodes("//*[@Name]") | ForEach-Object{Set-Variable -Name ($_.Name) -Value $MainWindow.FindName($_.Name)}
 
+# Define ListBox
 $ComputerListBox = $MainWindow.FindName("ComputerList")
 
 function BuildList() {
@@ -41,10 +42,13 @@ function BuildList() {
     ForEach($Computer in $Computers) {
         $ComputerListBox.Items.Add($Computer)
     }
+    # Scroll List to top
+    $ComputerListBox.SelectedIndex = 0;
+    $ComputerListBox.ScrollIntoView($ComputerListBox.SelectedItem) ;
 }
 
 
-<# Initialisation #>
+<# Initialization #>
 $MainWindow.Add_ContentRendered({
     <# Import Settings From XML #>
     try {
@@ -83,5 +87,6 @@ $MainWindow.FindName("UninstallBTN").add_click({
         Start-Process Powershell.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNC.ps1`" -ComputerName $($ComputerListBox.SelectedItem) -Remove" -Verb RunAs 
     }
 })
+
 # Show MainWindow
 $MainWindow.ShowDialog() | Out-Null
