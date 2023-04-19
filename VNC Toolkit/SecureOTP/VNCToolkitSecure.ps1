@@ -36,7 +36,7 @@ Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Windows.Forms
 
 # Import XAML Window
-[xml]$XAML = Get-Content "MainWindow.xaml"
+[xml]$XAML = Get-Content "MainWindowSecure.xaml"
 $XAML.Window.RemoveAttribute('x:Class')
 $XAML.Window.RemoveAttribute('mc:Ignorable')
 $XAMLReader = New-Object System.Xml.XmlNodeReader $XAML
@@ -58,6 +58,24 @@ function BuildList() {
     $ComputerListBox.ScrollIntoView($ComputerListBox.SelectedItem) ;
 }
 
+# Generate Secure Password
+Function Get-RandomPassword {
+    #define parameters
+    param([int]$PasswordLength = 8)
+ 
+    #ASCII Character set for Password
+    $CharacterSet = @{
+            Uppercase   = (97..122) | Get-Random -Count 10 | % {[char]$_}
+            Lowercase   = (65..90)  | Get-Random -Count 10 | % {[char]$_}
+            Numeric     = (48..57)  | Get-Random -Count 10 | % {[char]$_}
+            #SpecialChar = (33..47)+(58..64)+(91..96)+(123..126) | Get-Random -Count 10 | ForEach-Object {[char]$_}
+    }
+ 
+    #Frame Random Password from given character set
+    $StringSet = $CharacterSet.Uppercase + $CharacterSet.Lowercase + $CharacterSet.Numeric #+ $CharacterSet.SpecialChar
+ 
+    -join(Get-Random -Count $PasswordLength -InputObject $StringSet)
+}
 
 <# Initialization #>
 $MainWindow.Add_ContentRendered({
@@ -75,29 +93,20 @@ $MainWindow.FindName("ConnectBTN").add_click({
         [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
         [System.Windows.Forms.MessageBox]::Show('You must select a machine to connect.','ERROR')
     } else {
-        Start-Process -FilePath "tvnviewer.exe" -ArgumentList $ComputerListBox.SelectedItem
+        Start-ThreadJob -Name "TEST" -ScriptBlock {
+            $ThisComputer = $args[0]
+            $OTPPassword = $args[1]
+            # Deploy
+            Start-Process Powershell.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNC.ps1`" -ComputerName $($ThisComputer) -VNCPassword $OTPPassword" -Verb RunAs -Wait
+            # Connect
+            Start-Process -FilePath "tvnviewer.exe" -ArgumentList "`"$ThisComputer`" -password=$OTPPassword -scale=auto" -Wait
+            # Remove
+            Start-Process Powershell.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNC.ps1`" -ComputerName $($ThisComputer) -Remove" -Verb RunAs 
+        } -ArgumentList $ComputerListBox.SelectedItem,$(Get-RandomPassword -PasswordLength 8)
+        
     }
 })
 
-$MainWindow.FindName("DeployBTN").add_click({
-    if ([string]::IsNullOrEmpty($MainWindow.FindName("VNCPassword").Text) -or [string]::IsNullOrEmpty($ComputerListBox.SelectedItem) ) {
-        [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        [System.Windows.Forms.MessageBox]::Show('You must select a machine and set password before deployment.','ERROR')
-    } else {
-        Start-Process Powershell.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNC.ps1`" -ComputerName $($ComputerListBox.SelectedItem) -VNCPassword $($MainWindow.FindName("VNCPassword").Text)" -Verb RunAs 
-    }
-    
-    
-})
-
-$MainWindow.FindName("UninstallBTN").add_click({
-    if ([string]::IsNullOrEmpty($ComputerListBox.SelectedItem) ) {
-        [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        [System.Windows.Forms.MessageBox]::Show('You must select a machine before removal.','ERROR')
-    } else {
-        Start-Process Powershell.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNC.ps1`" -ComputerName $($ComputerListBox.SelectedItem) -Remove" -Verb RunAs 
-    }
-})
 
 # Show MainWindow
 $MainWindow.ShowDialog() | Out-Null
