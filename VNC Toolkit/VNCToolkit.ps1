@@ -235,14 +235,14 @@ Add-Type -AssemblyName System.Windows.Forms
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:JustForForms"
         mc:Ignorable="d"
-        Title="VNC Toolkit" Height="640" Width="540"
+        Title="AD VNC Toolkit" Height="640" Width="540"
 		ResizeMode="NoResize">
     <Grid>
         <ListBox x:Name="ComputerList" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="256" MinHeight="400" Height="594"/>
         <TabControl HorizontalAlignment="Left" Height="594" Margin="271,10,0,0" VerticalAlignment="Top" Width="255">
             <TabItem Header="Connect">
                 <Grid Background="#FFE5E5E5">
-                    <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="501" Width="229"><Run Text="This tool requires internet connectivity on both the client and server."/><LineBreak/><Run/><LineBreak/><Run Text="Clicking Connect will"/><LineBreak/><Run Text="1) Connect to remote machine."/><LineBreak/><Run Text="2) Download the installation"/><LineBreak/><Run Text="3) Install using a random password"/><LineBreak/><Run Text="4) Delete installation cache"/><LineBreak/><Run Text="5) Connect using the random password"/><LineBreak/><Run/><LineBreak/><Run Text="Upon Disconnect"/><LineBreak/><Run Text="1) Connect to remote machine"/><LineBreak/><Run Text="2) Uninstall the TightVNC server"/><LineBreak/><Run Text=""/><LineBreak/><Run/><LineBreak/><Run Text=""/><LineBreak/><Run Text=""/></TextBlock>
+                    <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="501" Width="229"><Run Text="This tool initially requires internet connectivity to setup deployment caches."/><LineBreak/><Run/><LineBreak/><Run Text="Clicking Connect:"/><LineBreak/><Run Text="1) Connect to remote machine."/><LineBreak/><Run Text="2) Download the installation"/><LineBreak/><Run Text="3) Install using a random password"/><LineBreak/><Run Text="4) Connect using the random password"/><LineBreak/><Run/><LineBreak/><Run Text="Upon Disconnect:"/><LineBreak/><Run Text="1) Connect to remote machine"/><LineBreak/><Run Text="2) Uninstall the TightVNC server"/><LineBreak/><Run Text="3) Delete installation cache"/><LineBreak/><Run Text=""/><LineBreak/><Run/><LineBreak/><Run Text=""/><LineBreak/><Run Text=""/></TextBlock>
                     <Button x:Name="ConnectBTN" Content="Connect" HorizontalAlignment="Left" Margin="10,516,0,0" VerticalAlignment="Top" Width="229" Height="40"/>
                 </Grid>
             </TabItem>
