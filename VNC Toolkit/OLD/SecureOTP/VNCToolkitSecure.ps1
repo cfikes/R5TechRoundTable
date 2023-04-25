@@ -93,17 +93,32 @@ $MainWindow.FindName("ConnectBTN").add_click({
         [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
         [System.Windows.Forms.MessageBox]::Show('You must select a machine to connect.','ERROR')
     } else {
-        Start-ThreadJob -Name "TEST" -ScriptBlock {
-            $ThisComputer = $args[0]
-            $OTPPassword = $args[1]
-            # Deploy
-            Start-Process Powershell.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNC.ps1`" -ComputerName $($ThisComputer) -VNCPassword $OTPPassword" -Verb RunAs -Wait
-            # Connect
-            Start-Process -FilePath "tvnviewer.exe" -ArgumentList "`"$ThisComputer`" -password=$OTPPassword -scale=auto" -Wait
-            # Remove
-            Start-Process Powershell.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNC.ps1`" -ComputerName $($ThisComputer) -Remove" -Verb RunAs 
-        } -ArgumentList $ComputerListBox.SelectedItem,$(Get-RandomPassword -PasswordLength 8)
-        
+        if($PSVersionTable.psversion.Major -le 5){
+            if (Test-Connection $ComputerListBox.SelectedItem -Protocol WSMan -Count 1) {
+                # Use Helper Process
+                Start-Process Powershell.exe -ArgumentList "-file `"$(Get-Location)\PS5Handler.ps1`" -ThisComputer $($ComputerListBox.SelectedItem) -OTPPassword $(Get-RandomPassword -PasswordLength 8)"
+            } else {
+                [System.Windows.MessageBox]::Show('Could not connect to host.')
+            }
+        } else {
+            if (Test-Connection -TargetName $ComputerListBox.SelectedItem -TimeoutSeconds 1 -Count 1) {
+                # Execute Multithreaded Code
+                $JobName = $(Get-Date -UFormat %s)
+                Start-ThreadJob -Name "$JobName" -ScriptBlock {
+                    $ThisComputer = $args[0]
+                    $OTPPassword = $args[1]
+                    Write-Host $ThisComputer $OTPPassword
+                    # Deploy
+                    Start-Process pwsh.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNCv7.ps1`" -ComputerName $($ThisComputer) -VNCPassword $OTPPassword" -Verb RunAs -Wait
+                    # Connect
+                    Start-Process -FilePath "tvnviewer.exe" -ArgumentList "`"$ThisComputer`" -password=$OTPPassword -scale=auto" -Wait
+                    # Remove
+                    Start-Process pwsh.exe -ArgumentList "-file `"$(Get-Location)\Deploy-TightVNCv7.ps1`" -ComputerName $($ThisComputer) -Remove" -Verb RunAs 
+                } -ArgumentList "$ComputerListBox.SelectedItem","$(Get-RandomPassword -PasswordLength 8)"
+            } else {
+                [System.Windows.MessageBox]::Show('Could not connect to host.')
+            }
+        }
     }
 })
 

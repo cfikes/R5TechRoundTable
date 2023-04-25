@@ -23,8 +23,6 @@ https://fikesmedia.com
 # Required Parameters
 [CmdletBinding(DefaultParameterSetName="Installation")]
 param(
-    [Parameter(ParameterSetName='Installation', Position=0)]
-    [string]$VNCDownload = "https://www.tightvnc.com/download/2.8.63/tightvnc-2.8.63-gpl-setup-64bit.msi",
 	[Parameter(Mandatory=$true)]
     [string]$ComputerName,
     [Parameter(ParameterSetName='Installation',Mandatory=$true)]
@@ -34,9 +32,10 @@ param(
 )
 
 
+$VNCDownload = "https://www.tightvnc.com/download/2.8.79/tightvnc-2.8.79-gpl-setup-64bit.msi"
 $VNCLocal = "TightVNC.msi"
 $DeploymentCache = "C:\Users\Public\Documents\Deployments"
-$DeploymentSMB = "\\$($ComputerName)\" + $($DeploymentCache.replace(':','$'))
+
 
 
 # Check Prompt Elevation
@@ -45,7 +44,7 @@ if ($CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
     Write-Host "Attempting to elevate privileges."
     if($Remove.IsPresent) {
         Try {
-            Start-Process Powershell.exe $MyInvocation.MyCommand.Path -ArgumentList "-ComputerName $($ComputerName) -Remove" -Verb RunAs 
+            Start-Process pwsh.exe $MyInvocation.MyCommand.Path -ArgumentList "-ComputerName $($ComputerName) -Remove" -Verb RunAs 
         }
         Catch {
             Write-Host "Could Not Elevate Privileges."
@@ -54,7 +53,7 @@ if ($CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
         }
     } else {
         Try {
-            Start-Process Powershell.exe $MyInvocation.MyCommand.Path -ArgumentList "-ComputerName $($ComputerName) -VNCPassword `"$($VNCPassword)`"" -Verb RunAs
+            Start-Process pwsh.exe $MyInvocation.MyCommand.Path -ArgumentList "-ComputerName $($ComputerName) -VNCPassword `"$($VNCPassword)`"" -Verb RunAs
         }
         Catch {
             Write-Host "Could Not Elevate Privileges."
@@ -62,8 +61,6 @@ if ($CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
             exit
         } 
     }
-    
-    
 }
 
 if($Remove){
@@ -86,13 +83,18 @@ if($Remove){
 
         # Download Installation
         try {
-            Invoke-WebRequest -URI $VNCDownload -OutFile $VNCLocal
+            Write-Host $VNCLocal $VNCDownload
+            Read-Host
+            Invoke-WebRequest $VNCDownload -OutFile $VNCLocal -Verbose 
+            
             While ((Test-Path -Path "TightVNC.msi") -eq $False) {
                 Write-host "Waiting"  
             }
+            
         }
         catch {
-            Write-Host "Error Downloading File"
+            Write-Host "Error Downloading File" $_
+            Read-Host
             exit
         }
 
