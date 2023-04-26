@@ -38,6 +38,7 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$ComputerName
 )
+$ScriptVersion = "1.1 Initial"
 
 $CachePath = "$($DeploymentCache)\$($VNCLocal)"
 $ScriptPath = "$(Get-Location)\VNCToolkit.ps1"
@@ -72,7 +73,7 @@ function BuildList() {
 
 function Removal() {
     # Begin Removal
-    Write-Host "Removing from $($ComputerName)" 
+    Write-Host "`nRemoving installation." -ForegroundColor Green
     try {
         Invoke-Command -ComputerName $ComputerName -ScriptBlock {
             $Deployment = Get-WmiObject -Class Win32_Product | Where-Object{$_.Name -eq "TightVNC"}
@@ -80,7 +81,8 @@ function Removal() {
         }
     }
     Catch {
-        Write-Host "Error Removing Deployment"
+        Write-Host "Error Removing Deployment!" -ForegroundColor Red
+        Write-Host $_
     }
     
     # Clear Remote Cache
@@ -88,24 +90,33 @@ function Removal() {
       Remove-Item -Path "$($DeploymentSMB)\$($VNCLocal)" -Force -Verbose
     }
     catch {
-        Write-Host "Error Removing Cache"
+        Write-Host "Error Removing Cache!" -ForegroundColor Red
+        Write-Host $_
     }
     exit
 }
 
 function Deploy() {
+    Write-Host "Do NOT close this window." -ForegroundColor Yellow
+    Write-Host "Doing so will cancel the deployment process.`n" -ForegroundColor Yellow
+    Write-Host "Instance for: " -ForegroundColor Green -NoNewline
+    Write-Host "$($ComputerName)`n"
+    Write-Host "Begining deployment." -ForegroundColor Green
     try {
         # Test Local Cache
         if ((Test-Path -Path $CachePath) -eq $False) {
+            Write-Host "Deployment cache missing." -ForegroundColor Green
             # Download Installation
             try {
+                Write-Host "Downloading installation." -ForegroundColor Green
                 Invoke-WebRequest -URI $VNCDownload -OutFile $CachePath
                 While ((Test-Path -Path $CachePath) -eq $False) {
                     Write-host "Waiting"
                 }
             }
             catch {
-                Write-Host "Error Downloading File"
+                Write-Host "Error Downloading File!"  -ForegroundColor Red
+                Write-Host $_
             }
         }
 
@@ -117,48 +128,54 @@ function Deploy() {
             } -ArgumentList $DeploymentCache
         }
         catch {
-            Write-Host "Error Creating Deployment Cache"
+            Write-Host "Error Creating Deployment Cache!" -ForegroundColor Red
+            Write-Host $_
         }
 
         # Copy To Deployment Cache
         try {
-            Write-Host "Copying Installation to $($ComputerName)"
+            Write-Host "Copying installation files."-ForegroundColor Green
             Copy-Item -Path $CachePath -Destination $DeploymentSMB -Force
         }
         catch {
-            Write-Host "Error Copying Installation"
+            Write-Host "Error Copying Installation!" -ForegroundColor Red
+            Write-Host $_
         }
 
         # Start Deployment
         try {
+            Write-Host "Begining installation." -ForegroundColor Green
             Invoke-Command -ComputerName $ComputerName -ScriptBlock {
                 param($CachePath, $VNCPass)
 	            Start-Process "msiexec.exe" -ArgumentList "/i $($CachePath) /quiet /norestart ADDLOCAL=`"Server,Viewer`" SERVER_REGISTER_AS_SERVICE=1 SERVER_ADD_FIREWALL_EXCEPTION=1 SERVER_ALLOW_SAS=1 SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=1 SET_ACCEPTHTTPCONNECTIONS=1 VALUE_OF_ACCEPTHTTPCONNECTIONS=0 SET_PASSWORD=1 VALUE_OF_PASSWORD=`"$($VNCPass)`"" -Wait
             } -ArgumentList ($CachePath, $VNCPass)
         }
         Catch {
-            Write-Host "Error Installing Deployment"
+            Write-Host "Error Installing Deployment!" -ForegroundColor Red
+            Write-Host $_
         }
         
     }
     catch {
-        Write-Host "There were errors completing the deploymnet."
+        Write-Host "There were errors completing the deploymnet!" -ForegroundColor Red
+        Write-Host $_
     }
 }
 
 function Connect() {
-    Write-Host "Connecting to $($ComputerName)"
+    Write-Host "Connecting to $($ComputerName)" -ForegroundColor Green
     Start-Process -FilePath "C:\Program Files\TightVNC\tvnviewer.exe" -ArgumentList "`"$($ComputerName)`" -password=$($VNCPass) -scale=auto" -Wait
 }
 
 function InstallViewer(){
+    Write-Host "Missing Requirements, Installing TVNViewer." -ForegroundColor Yellow
     # Download Cache
     try {
         New-Item -ItemType Directory -Path $DeploymentCache -Force | Out-Null
         Invoke-WebRequest -URI $VNCDownload -OutFile "$($CachePath)"
     }
     catch {
-        Write-Host "Error Downloading File"
+        Write-Host "Error Downloading File!" -ForegroundColor Red
     }
 
     # Install From Cache
@@ -166,7 +183,7 @@ function InstallViewer(){
         Start-Process "msiexec.exe" -ArgumentList "/i $($CachePath) /quiet /norestart ADDLOCAL=`"Viewer`"" -Verb RunAs -Wait
     }
     catch {
-        Write-Host "Error Installing Viewer"
+        Write-Host "Error Installing Viewer!" -ForegroundColor Red
     }
 }
 
@@ -186,8 +203,9 @@ if ($CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
             }
         }
         Catch {
-            Write-Host "Could Not Elevate Privileges."
-            Write-Host "Cannot run from standard user prompt, please run as administrator. REMOVAL"
+            Write-Host "Could Not Elevate Privileges." -ForegroundColor Red
+            Write-Host "Cannot run from standard user prompt, please run as administrator. REMOVAL" -ForegroundColor Red
+            Write-Host $_
         }
     } elseif ($Install.IsPresent) {
         Try {
@@ -199,8 +217,9 @@ if ($CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
             }
         }
         Catch {
-            Write-Host "Could Not Elevate Privileges."
-            Write-Host "Cannot run from standard user prompt, please run as administrator. INSTALLATION"
+            Write-Host "Could Not Elevate Privileges." -ForegroundColor Red
+            Write-Host "Cannot run from standard user prompt, please run as administrator. INSTALLATION" -ForegroundColor Red
+            Write-Host $_
         }
     }
 }
@@ -216,9 +235,9 @@ if ($Remove.IsPresent) {
         Write-Host "REMOVAL ERROR " $_
     }
 } elseif ($Install.IsPresent) {
-    try { Deploy } catch { Write-Host "Install Error " $_ }
-    try { Connect } catch { Write-Host "Connection Error " $_ }
-    try { Removal } catch { Write-Host "Removal Error " $_ }
+    try { Deploy } catch { }
+    try { Connect } catch { }
+    try { Removal } catch { }
 }
 
 
@@ -329,10 +348,15 @@ $MainWindow.FindName("ConnectBTN").add_click({
     }
 })
 
+Write-Host "------------------------------------------------" -ForegroundColor Green
+Write-Host "|  AD VNC Toolkit                              |" -ForegroundColor Green
+Write-Host "|  https://github.com/cfikes/R5TechRoundTable  |" -ForegroundColor Green
+Write-Host "------------------------------------------------" -ForegroundColor Green
+Write-Host "Version: $($ScriptVersion)"  -ForegroundColor Green
+Write-Host "`nClosing this windows will close the application."
 
 # Check for Requirements and Install
 if ((Test-Path -Path "C:\Program Files\TightVNC\tvnviewer.exe") -eq $false) {
-    Write-Host "Missing Requirements, Installing TVNViewer."
     InstallViewer
 }
 
