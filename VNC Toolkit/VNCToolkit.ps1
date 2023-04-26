@@ -35,10 +35,14 @@ param(
     [string]$DeploymentCache="C:\Users\Public\Documents\Deployments",
     [Parameter(ParameterSetName='Removal',Mandatory=$false)]
     [switch]$Remove,
+    [Parameter(ParameterSetName='MenuClick',Mandatory=$false)]
+    [switch]$MenuClick,
+    [Parameter(ParameterSetName='MenuClick',Mandatory=$false)]
+    [string]$MenuAction,
     [Parameter(Mandatory=$false)]
     [string]$ComputerName
 )
-$ScriptVersion = "1.1 Initial"
+$ScriptVersion = "1.2 Client Tools"
 
 $CachePath = "$($DeploymentCache)\$($VNCLocal)"
 $ScriptPath = "$(Get-Location)\VNCToolkit.ps1"
@@ -187,6 +191,34 @@ function InstallViewer(){
     }
 }
 
+function MenuClick_OpenSMB(){
+    Start-Process "Explorer.exe" "\\$($ComputerListBox.SelectedItem)\C$\"
+}
+
+function MenuClick_UpdateGPO(){
+    Try {
+        if($PSVersionTable.psversion.Major -le 5){
+            Start-Process powershell.exe -ArgumentList "-NoExit Invoke-Command -ComputerName $($ComputerListBox.SelectedItem) -ScriptBlock {Write-Host `"Updating policies on $($ComputerListBox.SelectedItem)`" -ForegroundColor Green;gpupdate.exe /Force};exit" -Verb RunAs
+        } else {
+            Start-Process pwsh.exe -ArgumentList "-NoExit Invoke-Command -ComputerName $($ComputerListBox.SelectedItem) -ScriptBlock {Write-Host `"Updating policies on $($ComputerListBox.SelectedItem)`" -ForegroundColor Green;gpupdate.exe /Force};exit" -Verb RunAs
+        }
+    }
+    Catch {
+        Write-Host "Error Updating Policy!" -ForegroundColor Red
+        Write-Host $_
+    }
+}
+
+function MenuClick_RemoteConsole() {
+    Write-Host "Connecting to $($ComputerName) Remote PowerShell" -ForegroundColor Green
+    if($PSVersionTable.psversion.Major -le 5){
+        Start-Process powershell.exe -ArgumentList "-NoExit Enter-PSSession -ComputerName $($ComputerListBox.SelectedItem)" -Verb RunAs
+    } else {
+        Start-Process pwsh.exe -ArgumentList "-NoExit Enter-PSSession -ComputerName $($ComputerListBox.SelectedItem)" -Verb RunAs
+    }
+
+}
+
 
 # Check Prompt Elevation
 $CurrentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -254,6 +286,8 @@ if ($Remove.IsPresent) {
     Catch { 
 
     }
+} elseif($MenuClick.IsPresent) {
+
 }
 
 
@@ -273,12 +307,28 @@ Add-Type -AssemblyName System.Windows.Forms
         Title="AD VNC Toolkit" Height="640" Width="540"
 		ResizeMode="NoResize">
     <Grid>
-        <ListBox x:Name="ComputerList" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="256" MinHeight="400" Height="594"/>
+        <ListBox x:Name="ComputerList" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="256" MinHeight="400" Height="594">
+        <ListBox.Resources>
+
+        <!--Defines a context menu-->
+        <ContextMenu x:Key="ClientMenu">
+            <MenuItem x:Name="MenuSMBOpen" Header="SMB Open C$"/>
+            <MenuItem x:Name="MenuUpdateGPO" Header="Update Group Policy"/>
+            <MenuItem x:Name="MenuPSConsole" Header="Open PowerShell Console"/>
+        </ContextMenu>
+
+        <!--Sets a context menu for each ListBoxItem in the current ListBox-->
+        <Style TargetType="{x:Type ListBoxItem}">
+             <Setter Property="ContextMenu" Value="{StaticResource ClientMenu}"/>
+        </Style>
+
+        </ListBox.Resources>
+        </ListBox>
         <TabControl HorizontalAlignment="Left" Height="594" Margin="271,10,0,0" VerticalAlignment="Top" Width="255">
-            <TabItem Header="Connect">
+            <TabItem Header="VNC Connect">
                 <Grid Background="#FFE5E5E5">
-                    <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="501" Width="229"><Run Text="This tool initially requires internet connectivity to setup deployment caches."/><LineBreak/><Run/><LineBreak/><Run Text="Clicking Connect:"/><LineBreak/><Run Text="1) Connect to remote machine."/><LineBreak/><Run Text="2) Download the installation"/><LineBreak/><Run Text="3) Install using a random password"/><LineBreak/><Run Text="4) Connect using the random password"/><LineBreak/><Run/><LineBreak/><Run Text="Upon Disconnect:"/><LineBreak/><Run Text="1) Connect to remote machine"/><LineBreak/><Run Text="2) Uninstall the TightVNC server"/><LineBreak/><Run Text="3) Delete installation cache"/><LineBreak/><Run Text=""/><LineBreak/><Run/><LineBreak/><Run Text=""/><LineBreak/><Run Text=""/></TextBlock>
-                    <Button x:Name="ConnectBTN" Content="Connect" HorizontalAlignment="Left" Margin="10,516,0,0" VerticalAlignment="Top" Width="229" Height="40"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="10,292,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="501" Width="229"><Run Text="This tool initially requires internet connectivity to setup deployment caches."/><LineBreak/><Run/><LineBreak/><Run Text="Clicking Connect:"/><LineBreak/><Run Text="1) Connect to remote machine."/><LineBreak/><Run Text="2) Download the installation"/><LineBreak/><Run Text="3) Install using a random password"/><LineBreak/><Run Text="4) Connect using the random password"/><LineBreak/><Run/><LineBreak/><Run Text="Upon Disconnect:"/><LineBreak/><Run Text="1) Connect to remote machine"/><LineBreak/><Run Text="2) Uninstall the TightVNC server"/><LineBreak/><Run Text="3) Delete installation cache"/><LineBreak/><Run Text=""/><LineBreak/><Run/><LineBreak/><Run Text=""/><LineBreak/><Run Text=""/></TextBlock>
+                    <Button x:Name="ConnectBTN" Content="Deploy and Connect" HorizontalAlignment="Left" Margin="10,516,0,0" VerticalAlignment="Top" Width="229" Height="40"/>
                 </Grid>
             </TabItem>
         </TabControl>
@@ -363,6 +413,40 @@ $MainWindow.FindName("ConnectBTN").add_click({
         }
     }
 })
+
+# Menu Interactions
+# Remote PowerShell
+$MainWindow.FindName("MenuPSConsole").add_click({
+    Try {
+        MenuClick_RemoteConsole
+    }
+    Catch {
+
+    }
+
+})
+# Open C$
+$MainWindow.FindName("MenuSMBOpen").add_click({
+    Try {
+        MenuClick_OpenSMB
+    }
+    Catch {
+
+    }
+
+})
+# Update GPO
+$MainWindow.FindName("MenuUpdateGPO").add_click({
+    Try {
+        MenuClick_UpdateGPO
+    }
+    Catch {
+
+    }
+
+})
+
+
 
 Write-Host "------------------------------------------------" -ForegroundColor Green
 Write-Host "|  AD VNC Toolkit                              |" -ForegroundColor Green
