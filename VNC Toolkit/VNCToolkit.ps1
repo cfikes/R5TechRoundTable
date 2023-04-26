@@ -74,7 +74,7 @@ function BuildList() {
 function Removal() {
     # Begin Removal
     Write-Host "`nRemoving installation." -ForegroundColor Green
-    try {
+    Try {
         Invoke-Command -ComputerName $ComputerName -ScriptBlock {
             $Deployment = Get-WmiObject -Class Win32_Product | Where-Object{$_.Name -eq "TightVNC"}
             $Deployment.Uninstall() | Out-Null
@@ -86,10 +86,10 @@ function Removal() {
     }
     
     # Clear Remote Cache
-    try {
+    Try {
       Remove-Item -Path "$($DeploymentSMB)\$($VNCLocal)" -Force -Verbose
     }
-    catch {
+    Catch {
         Write-Host "Error Removing Cache!" -ForegroundColor Red
         Write-Host $_
     }
@@ -102,48 +102,48 @@ function Deploy() {
     Write-Host "Instance for: " -ForegroundColor Green -NoNewline
     Write-Host "$($ComputerName)`n"
     Write-Host "Begining deployment." -ForegroundColor Green
-    try {
+    Try {
         # Test Local Cache
         if ((Test-Path -Path $CachePath) -eq $False) {
             Write-Host "Deployment cache missing." -ForegroundColor Green
             # Download Installation
-            try {
+            Try {
                 Write-Host "Downloading installation." -ForegroundColor Green
                 Invoke-WebRequest -URI $VNCDownload -OutFile $CachePath
                 While ((Test-Path -Path $CachePath) -eq $False) {
                     Write-host "Waiting"
                 }
             }
-            catch {
+            Catch {
                 Write-Host "Error Downloading File!"  -ForegroundColor Red
                 Write-Host $_
             }
         }
 
         # Create Deployment Cache
-        try {
+        Try {
             Invoke-Command -ComputerName $ComputerName -ScriptBlock {
                 param($DeploymentCache)
 	            New-Item -ItemType Directory -Path $DeploymentCache -Force | Out-Null
             } -ArgumentList $DeploymentCache
         }
-        catch {
+        Catch {
             Write-Host "Error Creating Deployment Cache!" -ForegroundColor Red
             Write-Host $_
         }
 
         # Copy To Deployment Cache
-        try {
+        Try {
             Write-Host "Copying installation files."-ForegroundColor Green
             Copy-Item -Path $CachePath -Destination $DeploymentSMB -Force
         }
-        catch {
+        Catch {
             Write-Host "Error Copying Installation!" -ForegroundColor Red
             Write-Host $_
         }
 
         # Start Deployment
-        try {
+        Try {
             Write-Host "Begining installation." -ForegroundColor Green
             Invoke-Command -ComputerName $ComputerName -ScriptBlock {
                 param($CachePath, $VNCPass)
@@ -156,7 +156,7 @@ function Deploy() {
         }
         
     }
-    catch {
+    Catch {
         Write-Host "There were errors completing the deploymnet!" -ForegroundColor Red
         Write-Host $_
     }
@@ -170,19 +170,19 @@ function Connect() {
 function InstallViewer(){
     Write-Host "Missing Requirements, Installing TVNViewer." -ForegroundColor Yellow
     # Download Cache
-    try {
+    Try {
         New-Item -ItemType Directory -Path $DeploymentCache -Force | Out-Null
         Invoke-WebRequest -URI $VNCDownload -OutFile "$($CachePath)"
     }
-    catch {
+    Catch {
         Write-Host "Error Downloading File!" -ForegroundColor Red
     }
 
     # Install From Cache
-    try {
+    Try {
         Start-Process "msiexec.exe" -ArgumentList "/i $($CachePath) /quiet /norestart ADDLOCAL=`"Viewer`"" -Verb RunAs -Wait
     }
-    catch {
+    Catch {
         Write-Host "Error Installing Viewer!" -ForegroundColor Red
     }
 }
@@ -228,6 +228,7 @@ if ($CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
 # Is Admin
 if ($Remove.IsPresent) {
     Try {
+        # Manual Removal -Remove -ComputerName ""
         Removal
         exit
     }
@@ -235,9 +236,24 @@ if ($Remove.IsPresent) {
         Write-Host "REMOVAL ERROR " $_
     }
 } elseif ($Install.IsPresent) {
-    try { Deploy } catch { }
-    try { Connect } catch { }
-    try { Removal } catch { }
+    Try { 
+        Deploy 
+    } 
+    Catch {
+
+    }
+    Try { 
+        Connect 
+    } 
+    Catch { 
+
+    }
+    Try { 
+        Removal 
+    } 
+    Catch { 
+
+    }
 }
 
 
@@ -314,9 +330,9 @@ function BuildList() {
 <# Initialization #>
 $MainWindow.Add_ContentRendered({
     <# Import Settings From XML #>
-    try {
+    Try {
         BuildList
-    } catch {
+    } Catch {
     }
 
 })
