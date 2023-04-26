@@ -200,7 +200,8 @@ function MenuClick_UpdateGPO(){
         if($PSVersionTable.psversion.Major -le 5){
             Start-Process powershell.exe -ArgumentList "-NoExit Invoke-Command -ComputerName $($ComputerListBox.SelectedItem) -ScriptBlock {Write-Host `"Updating policies on $($ComputerListBox.SelectedItem)`" -ForegroundColor Green;gpupdate.exe /Force};exit" -Verb RunAs
         } else {
-            Start-Process pwsh.exe -ArgumentList "-NoExit Invoke-Command -ComputerName $($ComputerListBox.SelectedItem) -ScriptBlock {Write-Host `"Updating policies on $($ComputerListBox.SelectedItem)`" -ForegroundColor Green;gpupdate.exe /Force};exit" -Verb RunAs
+            #Executes in PS5 Until Fixed
+            Start-Process powershell.exe -ArgumentList "-NoExit Invoke-Command -ComputerName $($ComputerListBox.SelectedItem) -ScriptBlock {Write-Host `"Updating policies on $($ComputerListBox.SelectedItem)`" -ForegroundColor Green;gpupdate.exe /Force};exit" -Verb RunAs
         }
     }
     Catch {
@@ -214,7 +215,8 @@ function MenuClick_RemoteConsole() {
     if($PSVersionTable.psversion.Major -le 5){
         Start-Process powershell.exe -ArgumentList "-NoExit Enter-PSSession -ComputerName $($ComputerListBox.SelectedItem)" -Verb RunAs
     } else {
-        Start-Process pwsh.exe -ArgumentList "-NoExit Enter-PSSession -ComputerName $($ComputerListBox.SelectedItem)" -Verb RunAs
+        #Executes in PS5 Until Fixed
+        Start-Process powershell.exe -ArgumentList "-NoExit Enter-PSSession -ComputerName $($ComputerListBox.SelectedItem)" -Verb RunAs
     }
 
 }
@@ -415,6 +417,7 @@ $MainWindow.FindName("ConnectBTN").add_click({
 })
 
 # Menu Interactions
+
 # Remote PowerShell
 $MainWindow.FindName("MenuPSConsole").add_click({
     Try {
@@ -423,8 +426,8 @@ $MainWindow.FindName("MenuPSConsole").add_click({
     Catch {
 
     }
-
 })
+
 # Open C$
 $MainWindow.FindName("MenuSMBOpen").add_click({
     Try {
@@ -433,8 +436,8 @@ $MainWindow.FindName("MenuSMBOpen").add_click({
     Catch {
 
     }
-
 })
+
 # Update GPO
 $MainWindow.FindName("MenuUpdateGPO").add_click({
     Try {
