@@ -151,7 +151,7 @@ function Deploy() {
             Write-Host "Begining installation." -ForegroundColor Green
             Invoke-Command -ComputerName $ComputerName -ScriptBlock {
                 param($CachePath, $VNCPass)
-	            Start-Process "msiexec.exe" -ArgumentList "/i $($CachePath) /quiet /norestart ADDLOCAL=`"Server,Viewer`" SERVER_REGISTER_AS_SERVICE=1 SERVER_ADD_FIREWALL_EXCEPTION=1 SERVER_ALLOW_SAS=1 SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=1 SET_ACCEPTHTTPCONNECTIONS=1 VALUE_OF_ACCEPTHTTPCONNECTIONS=0 SET_PASSWORD=1 VALUE_OF_PASSWORD=`"$($VNCPass)`"" -Wait
+	            Start-Process "msiexec.exe" -ArgumentList "/i $($CachePath) /quiet /norestart ADDLOCAL=`"Server,Viewer`" SERVER_REGISTER_AS_SERVICE=1 SERVER_ADD_FIREWALL_EXCEPTION=1 SERVER_ALLOW_SAS=1 SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=1 SET_ACCEPTHTTPCONNECTIONS=1 VALUE_OF_ACCEPTHTTPCONNECTIONS=0 SET_REMOVEWALLPAPER=0 SET_PASSWORD=1 VALUE_OF_PASSWORD=`"$($VNCPass)`"" -Wait
             } -ArgumentList ($CachePath, $VNCPass)
         }
         Catch {
@@ -210,6 +210,20 @@ function MenuClick_UpdateGPO(){
     }
 }
 
+function MenuClick_PurgeVNC(){
+    Try {
+        if($PSVersionTable.psversion.Major -le 5){
+                Start-Process powershell.exe -ArgumentList "-file `"$($ScriptPath)`" -ComputerName $($ComputerName) -Remove" -Verb RunAs -wait
+            } else {
+                Start-Process pwsh.exe -ArgumentList "-file `"$($ScriptPath)`" -ComputerName $($ComputerName) -Remove" -Verb RunAs -wait
+            }
+    }
+    Catch {
+        Write-Host "Error Removing!" -ForegroundColor Red
+        Write-Host $_
+    }
+}
+
 function MenuClick_RemoteConsole() {
     Write-Host "Connecting to $($ComputerName) Remote PowerShell" -ForegroundColor Green
     if($PSVersionTable.psversion.Major -le 5){
@@ -231,9 +245,9 @@ if ($CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
         Try {
             Write-Host "Attempting to elevate privileges."
             if($PSVersionTable.psversion.Major -le 5){
-                Start-Process powershell.exe -ArgumentList "-file `"$($ScriptPath)`" -ComputerName $($ComputerName) -Remove" -Verb RunAs 
+                Start-Process powershell.exe -ArgumentList "-file `"$($ScriptPath)`" -ComputerName $($ComputerName) -Remove" -Verb RunAs
             } else {
-                Start-Process pwsh.exe -ArgumentList "-file `"$($ScriptPath)`" -ComputerName $($ComputerName) -Remove" -Verb RunAs 
+                Start-Process pwsh.exe -ArgumentList "-file `"$($ScriptPath)`" -ComputerName $($ComputerName) -Remove" -Verb RunAs
             }
         }
         Catch {
@@ -317,6 +331,7 @@ Add-Type -AssemblyName System.Windows.Forms
             <MenuItem x:Name="MenuSMBOpen" Header="SMB Open C$"/>
             <MenuItem x:Name="MenuUpdateGPO" Header="Update Group Policy"/>
             <MenuItem x:Name="MenuPSConsole" Header="Open PowerShell Console"/>
+			<MenuItem x:Name="MenuPurgeVNC" Header="Purge VNC"/>
         </ContextMenu>
 
         <!--Sets a context menu for each ListBoxItem in the current ListBox-->
@@ -442,6 +457,17 @@ $MainWindow.FindName("MenuSMBOpen").add_click({
 $MainWindow.FindName("MenuUpdateGPO").add_click({
     Try {
         MenuClick_UpdateGPO
+    }
+    Catch {
+
+    }
+
+})
+
+# Purge VNC
+$MainWindow.FindName("MenuPurgeVNC").add_click({
+    Try {
+        MenuClick_PurgeVNC
     }
     Catch {
 
