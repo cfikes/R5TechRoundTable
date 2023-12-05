@@ -1456,7 +1456,7 @@ function Choose-ADGroupList($listObject) {
     Add-Type -AssemblyName System.Drawing
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = 'Select a List'
+    $form.Text = 'Select a Group'
     $form.Size = New-Object System.Drawing.Size(300,400)
     $form.StartPosition = 'CenterScreen'
 
