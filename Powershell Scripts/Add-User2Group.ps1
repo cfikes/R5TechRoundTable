@@ -1600,6 +1600,7 @@ try {
         Add-ADGroupMember -Identity $ADGroup -Members $User 
     }
     Write-Host "Operation Complete"
+    Read-Host -Prompt "Press any key to exit..."
 }
 catch{
     Read-Host -Prompt "Press any key to continue..."
