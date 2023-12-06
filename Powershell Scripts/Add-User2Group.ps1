@@ -1,6 +1,29 @@
 <#
-	Adds All Active users in an OU to the Selected Group
+.SYNOPSIS
+
+This is a simple utility to add all users within a organizational unit to an active directory group.
+
+.DESCRIPTION
+
+Collects every active user within an organizational unit adds their membership to the specified active directory group. Defaults to a GUI.
+
+.EXAMPLE
+
+PS> ./Add-User2Group.ps1 -OU "CN=Users,DC=example,DC=com" -ADGroup "All Users"
+
+.EXAMPLE
+PS> ./Add-User2Group.ps1
+
+.NOTES
+
+If any parameter is not specified, defaults to GUI Mode to select OU and Group.
+
 #>
+
+param(
+	[string]$OU,
+	[string]$ADGroup
+)
 
 function Choose-ADOrganizationalUnit
 {
@@ -1565,43 +1588,62 @@ function Choose-Confirmation($OU, $Group) {
     }
 } # End Function Choose-Confirmation
 
-# Choose AD OU
-$OU = Choose-ADOrganizationalUnit
-# Exit if Cancel Picked
-if($OU -eq $null){
-    exit
+
+# Check for CLI Mode
+if(($PSBoundParameters.ContainsKey('OU') -eq $false) -Or ($PSBoundParameters.ContainsKey('ADGroup') -eq $false)) {
+	# Opererating in CLI Mode
+	$GUIMode = $true
 }
 
-# Change Window Title
-$Host.UI.RawUI.WindowTitle = "Searching Active Users In $OU"
-Write-Host "Searching Active Users In $OU"
+# If in GUI Mode clear vars for reselection. This triggers if a single parameter is missed.
+If ($GuiMode -eq $true) {
+	# Clear for Reeselection
+	Clear-Variable -Name OU
+	Clear-Variable -Name ADGroup
 
-# Choose AD Group
-$AllGroups = Get-ADGroup -Filter * | Sort-Object | Select-Object Name
-$ADGroup = Choose-ADGroupList $AllGroups
+	# Open Tree View Picker
+	$OU = Choose-ADOrganizationalUnit
+	
+	# Exit if Cancel Picked
+	if($null -eq $OU){
+		exit
+	}
 
-# Exit if Cancel Picked
-if($ADGroup -eq $null){
-    exit
+	# Choose AD Group
+	$AllGroups = Get-ADGroup -Filter * | Sort-Object | Select-Object Name
+	$ADGroup = Choose-ADGroupList $AllGroups
+
+	# Exit if Cancel Picked
+	if($null -eq $ADGroup){
+		exit
+	}
+	
+	# Confirmation Window
+	$Confirmation = Choose-Confirmation $OU $ADGroup
+
+	# Exit if Cancel
+	if($Confirmation -ne $true) {
+		exit
+	}
 }
 
-# Confirmation Window
-$Confirmation = Choose-Confirmation $OU $ADGroup
-
-# Exit if Cancel
-if($Confirmation -ne $true) {
-    exit
-}
-
+# Do the thing.
 try {
     Write-Host "Adding users into Group $ADGroup"
+	$Users = Get-ADUser -Filter 'enabled -eq "true"' -SearchBase "$OU"
+
+	if($($Users | Measure-Object).Count -eq 0){
+		Read-Host -Prompt "[No Users Found] Press Enter to exit"
+		exit
+	}
+	Write-Host $($Users | Measure-Object).Count
+
     foreach ($User in $(Get-ADUser -Filter 'enabled -eq "true"' -SearchBase "$OU")){
-        write-host Adding $USER.samaccountname
+        Write-Host "[Adding User] $($USER.samaccountname)"
         Add-ADGroupMember -Identity $ADGroup -Members $User 
     }
-    Write-Host "Operation Complete"
-    Read-Host -Prompt "Press any key to exit..."
+    Read-Host -Prompt "[Operation Complete] Press Enter to exit"
 }
 catch{
-    Read-Host -Prompt "Press any key to continue..."
+    Read-Host -Prompt "[Error]: Press Enter to exit"
 }
