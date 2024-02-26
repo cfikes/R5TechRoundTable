@@ -167,7 +167,7 @@ try {
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "TSDS ID" -Value $Row."TSDS ID"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Field" -Value "Interim Grade Testing"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Subject" -Value $ALG1Test
-                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "None"
+                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "Yes"
                     $InterimTests += $InterimTest
                     # Count Tests
                     $TestCounter += 1
@@ -180,7 +180,7 @@ try {
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "TSDS ID" -Value $Row."TSDS ID"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Field" -Value "Interim Grade Testing"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Subject" -Value $ENG1Test
-                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "None"
+                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "Yes"
                     $InterimTests += $InterimTest
                     # Count Tests
                     $TestCounter += 1
@@ -193,7 +193,7 @@ try {
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "TSDS ID" -Value $Row."TSDS ID"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Field" -Value "Interim Grade Testing"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Subject" -Value $ENG2Test
-                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "None"
+                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "Yes"
                     $InterimTests += $InterimTest
                     # Count Tests
                     $TestCounter += 1
@@ -206,7 +206,7 @@ try {
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "TSDS ID" -Value $Row."TSDS ID"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Field" -Value "Interim Grade Testing"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Subject" -Value $BIOTest
-                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "None"
+                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "Yes"
                     $InterimTests += $InterimTest
                     # Count Tests
                     $TestCounter += 1
@@ -219,7 +219,7 @@ try {
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "TSDS ID" -Value $Row."TSDS ID"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Field" -Value "Interim Grade Testing"
                     $InterimTest | Add-Member -MemberType NoteProperty -Name "Subject" -Value $USHTest
-                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "None"
+                    $InterimTest | Add-Member -MemberType NoteProperty -Name "Grade" -Value "Yes"
                     $InterimTests += $InterimTest
                     # Count Tests
                     $TestCounter += 1
