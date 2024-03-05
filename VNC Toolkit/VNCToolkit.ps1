@@ -28,9 +28,9 @@ param(
     [Parameter(ParameterSetName='Installation',Mandatory=$false)]
     [string]$VNCPass,
     [Parameter(ParameterSetName='Installation',Mandatory=$false)]
-    [string]$VNCLocal="TightVNC.msi",
+    [string]$VNCLocal="FikesMediaVNC.msi",
     [Parameter(ParameterSetName='Installation',Mandatory=$false)]
-    [string]$VNCDownload = "https://www.tightvnc.com/download/2.8.63/tightvnc-2.8.63-gpl-setup-64bit.msi",
+    [string]$VNCDownload = "https://github.com/FikesMedia/releases/blob/main/FikesMediaVNC/2.8.79/FikesMediaVNC.msi?raw=true",
     [Parameter(ParameterSetName='Installation',Mandatory=$false)]
     [string]$DeploymentCache="C:\Users\Public\Documents\Deployments",
     [Parameter(ParameterSetName='Removal',Mandatory=$false)]
@@ -42,7 +42,7 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$ComputerName
 )
-$ScriptVersion = "1.2 Client Tools"
+$ScriptVersion = "1.3 Client Tools"
 
 $CachePath = "$($DeploymentCache)\$($VNCLocal)"
 $ScriptPath = "$(Get-Location)\VNCToolkit.ps1"
@@ -168,11 +168,11 @@ function Deploy() {
 
 function Connect() {
     Write-Host "Connecting to $($ComputerName)" -ForegroundColor Green
-    Start-Process -FilePath "C:\Program Files\TightVNC\tvnviewer.exe" -ArgumentList "`"$($ComputerName)`" -password=$($VNCPass) -scale=auto" -Wait
+    Start-Process -FilePath "C:\Program Files\FikesMediaVNC\tvnviewer.exe" -ArgumentList "`"$($ComputerName)`" -password=$($VNCPass) -scale=auto" -Wait
 }
 
 function InstallViewer(){
-    Write-Host "Missing Requirements, Installing TVNViewer." -ForegroundColor Yellow
+    Write-Host "Missing Requirements, Installing FikesMediaVNC." -ForegroundColor Yellow
     # Download Cache
     Try {
         New-Item -ItemType Directory -Path $DeploymentCache -Force | Out-Null
@@ -485,7 +485,7 @@ Write-Host "Version: $($ScriptVersion)"  -ForegroundColor Green
 Write-Host "`nClosing this windows will close the application."
 
 # Check for Requirements and Install
-if ((Test-Path -Path "C:\Program Files\TightVNC\tvnviewer.exe") -eq $false) {
+if ((Test-Path -Path "C:\Program Files\FikesMediaVNC\tvnviewer.exe") -eq $false) {
     InstallViewer
 }
 
