@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 
 Creates Active Directory Student Accounts from a SFTP sourced Open Roster Compliant Students CSV
@@ -174,13 +174,22 @@ function CheckExistingStudent(){
     param (
         $SAMUsername
     )
-    # Check If User Exist
-    $UserAlreadyExist = Get-ADUser -Filter "sAMAccountName -eq '$SAMUsername'" -Properties sAMAccountName | Measure-Object | Select-Object -ExpandProperty Count
-    # Build Boolean response
-    if ($UserAlreadyExist -eq 0) {
+    
+    try {
+        # Check If User Exist
+        $UserAlreadyExist = Get-ADUser -Identity "$SAMUsername" -Properties Enabled
+        #$UserAlreadyExistCount = $UserAlreadyExist | Measure-Object | Select-Object -ExpandProperty Count
+        # Build Boolean response
+        if ($UserAlreadyExist.Enabled -eq $false) {
+            return "Disabled"
+        } elseif ($UserAlreadyExist.Enabled -eq $true) {0
+            return "Enabled"
+        } else {
+            return $false
+        }
+    }
+    catch {
         return $false
-    } else {
-        return $true
     }
 }
 
@@ -193,23 +202,42 @@ function CheckPreviousUnenrolled(){
     )
 
     # Get Existing Account for comparrison
-    $ExistingStudent = Get-ADUser -Identity $NewStudentAccount.SAMUsername -Properties Givenname,Surname,EmployeeID,Enabled
+    $ExistingStudent = Get-ADUser -Identity $NewStudentAccount.SAMUsername.toString() -Properties Givenname,DisplayName,Surname,EmployeeID,Enabled,Mail
 
-    # If all details match, update account and enable
-    If(($NewStudentAccount.SAMUsername -eq $ExistingStudent.SamAccountName) -and ($NewStudentAccount.FirstName -eq $ExistingStudent.GivenName) -and ($NewStudentAccount.LastName -eq $ExistingStudent.Surname) -and ($NewStudentAccount.EmployeeID -eq $ExistingStudent.EmployeeID) -and ($ExistingStudent.Enable -eq $false)) {
+    if(
+        $($NewStudentAccount.SAMUsername.ToLower() -eq $ExistingStudent.SamAccountName.toLower()) -and
+        $($NewStudentAccount.FirstName.ToLower() -eq $ExistingStudent.GivenName.ToLower()) -and
+        $($NewStudentAccount.LastName.ToLower() -eq $ExistingStudent.Surname.ToLower()) -and
+        $($NewStudentAccount.EmployeeID -eq $ExistingStudent.EmployeeID) -and
+        $($ExistingStudent.Enabled -eq $false)
+    ) {
         if($Settings.EnableCreation -eq $true) {
             Try {
-                Set-ADUser -Identity $NewStudentAccount.SAMUsername -Name $NewStudentAccount.DisplayName -DisplayName $NewStudentAccount.DisplayName -EmailAddress $NewStudentAccount.Email -AccountPassword $NewStudentAccount.PasswordSecure -OtherAttributes @{'pager'=$NewStudentAccount.Pager;'employeeid'=$NewStudentAccount.EmployeeID}
                 Enable-ADAccount -Identity $NewStudentAccount.SAMUsername
+                Set-ADAccountPassword -Identity $NewStudentAccount.SAMUsername -Reset -NewPassword (ConvertTo-SecureString -AsPlainText "$($NewStudentAccount.PasswordClear)" -Force)
+                Set-ADUser -Identity $NewStudentAccount.SAMUsername -ChangePasswordAtLogon $false
                 AddReportEntry -LocalLocation $ReportFile.toString() -Status "Enabled" -DisplayName $NewStudentAccount.DisplayName -UserName $NewStudentAccount.SAMUsername -Email $NewStudentAccount.Email -StudentID $NewStudentAccount.EmployeeID -PasswordClear $NewStudentAccount.PasswordClear -Class $NewStudentAccount.ClassOf -OU $NewStudentAccount.OU -Message "Previous Student"
-                $ReportEnabledPrevious += 1
+                $global:ReportEnabledPrevious += 1
             } Catch {
-                AddReportEntry -LocalLocation $ReportFile.toString() -Status "Error" -DisplayName $NewStudentAccount.DisplayName -UserName $NewStudentAccount.SAMUsername -Email $NewStudentAccount.Email -StudentID $NewStudentAccount.EmployeeID -PasswordClear $NewStudentAccount.PasswordClear -Class $NewStudentAccount.ClassOf -OU $NewStudentAccount.OU -Message "Error Enabling Previous Student"
+                AddReportEntry -LocalLocation $ReportFile.toString() -Status "Error" -DisplayName $NewStudentAccount.DisplayName -UserName $NewStudentAccount.SAMUsername -Email $NewStudentAccount.Email -StudentID $NewStudentAccount.EmployeeID -PasswordClear $NewStudentAccount.PasswordClear -Class $NewStudentAccount.ClassOf -OU $NewStudentAccount.OU -Message "Error Enabling Previous Student $_"
                 $global:ReportErrorsLogged += 1
             }
         } else {
+            $global:ReportEnabledPrevious += 1
             AddReportEntry -LocalLocation $ReportFile.toString() -Status "Audit Enabled" -DisplayName $NewStudentAccount.DisplayName -UserName $NewStudentAccount.SAMUsername -Email $NewStudentAccount.Email -StudentID $NewStudentAccount.EmployeeID -PasswordClear $NewStudentAccount.PasswordClear -Class $NewStudentAccount.ClassOf -OU $NewStudentAccount.OU -Message "Previous Student"
         }
+    } else {
+        Write-Host $NewStudentAccount.SAMUsername.ToLower()
+        Write-Host $NewStudentAccount.FirstName.ToLower()
+        Write-Host $NewStudentAccount.LastName.ToLower()
+        Write-Host $NewStudentAccount.EmployeeID
+        Write-Host "-----------"
+        Write-Host $ExistingStudent.SamAccountName.toLower()
+        Write-Host $ExistingStudent.GivenName.ToLower()
+        Write-Host $ExistingStudent.Surname.ToLower()
+        Write-Host $ExistingStudent.EmployeeID
+        Write-Host $ExistingStudent.Enabled
+        
     }
 }
 
@@ -281,15 +309,16 @@ function CreateNewStudentAccount() {
             }
             #Everything Completed successfully
             AddReportEntry -LocalLocation $ReportFile.toString() -Status "Complete" -DisplayName $NewStudentAccount.DisplayName -UserName $NewStudentAccount.ReportedUsername -Email $NewStudentAccount.Email -StudentID $NewStudentAccount.EmployeeID -PasswordClear $NewStudentAccount.PasswordClear -Class $NewStudentAccount.ClassOf -OU $NewStudentAccount.OU -Message ""
-            $ReportCreatedAccounts += 1
+            $global:ReportCreatedAccounts += 1
         } Catch {
             # Output error to screen
             Write-Host $_
             # Log Error to Report
             AddReportEntry -LocalLocation $ReportFile.toString() -Status "Failure" -DisplayName $NewStudentAccount.DisplayName -UserName $NewStudentAccount.ReportedUsername -Email $NewStudentAccount.Email -StudentID $NewStudentAccount.EmployeeID -PasswordClear $NewStudentAccount.PasswordClear -Class $NewStudentAccount.ClassOf -OU $NewStudentAccount.OU -Message "Failure to create user"
-            $ReportFailuresLogged += 1
+            $global:ReportFailuresLogged += 1
         }
     } else {
+        $global:ReportCreatedAccounts += 1
         AddReportEntry -LocalLocation $ReportFile.toString() -Status "Audit Creation" -DisplayName $NewStudentAccount.DisplayName -UserName $NewStudentAccount.ReportedUsername -Email $NewStudentAccount.Email -StudentID $NewStudentAccount.EmployeeID -PasswordClear $NewStudentAccount.PasswordClear -Class $NewStudentAccount.ClassOf -OU $NewStudentAccount.OU -Message "Account not created. AUDIT MODE"
     }
 }
@@ -324,16 +353,35 @@ function DisableUnEnrolled(){
     ForEach($User in $DisableList){
         $ThisUser = Get-ADUser -Identity $User -Properties DisplayName,mail,Givenname,Surname,SamAccountName,EmployeeID,DistinguishedName
         
-        If($Settings.EnableSuspension -eq $true) {
+        # Load ignore list
+        try {
+            [string[]]$ignoreFile = Get-Content -Path "ignore.txt" -ErrorAction 'silentlycontinue'
+        
+            if ($($ignoreFile -match $User).Length -gt 0){
+                $SkipThisUser = $true
+            } else {
+                $SkipThisUser = $false
+            }
+        }
+        catch {
+            $SkipThisUser = $false
+        }
+
+        If(($Settings.EnableSuspension -eq $true) -and ($SkipThisUser -eq $false)) {
             Try {
                 Disable-ADAccount -Identity $ThisUser.SAMAccountName
                 AddReportEntry -LocalLocation $ReportFile.toString() -Status "Disabled" -DisplayName $ThisUser.DisplayName -UserName $ThisUser.SAMAccountName -Email $ThisUser.mail -StudentID "$ThisUser.EmployeeID" -PasswordClear "" -Class "" -OU $ThisUser.DistinguishedName -Message ""
-                $ReportDisabledAccounts += 1
+                $global:ReportDisabledAccounts += 1
             } Catch {
                 AddReportEntry -LocalLocation $ReportFile.toString() -Status "Error" -DisplayName $ThisUser.DisplayName -UserName $ThisUser.SAMAccountName -Email $ThisUser.mail -StudentID "$ThisUser.EmployeeID" -PasswordClear "" -Class "" -OU $ThisUser.DistinguishedName -Message "Error Disabling Account"
             }
         } Else {
-            AddReportEntry -LocalLocation $ReportFile.toString() -Status "Audit Suspension" -DisplayName $ThisUser.DisplayName -UserName $ThisUser.SAMAccountName -Email $ThisUser.mail -StudentID $ThisUser.EmployeeID -PasswordClear "" -Class "" -OU $ThisUser.DistinguishedName -Message "Account exist but was not disabled."
+            $global:ReportDisabledAccounts += 1
+            if ($SkipThisUser -eq $true) {
+                AddReportEntry -LocalLocation $ReportFile.toString() -Status "Ignore Suspension" -DisplayName $ThisUser.DisplayName -UserName $ThisUser.SAMAccountName -Email $ThisUser.mail -StudentID $ThisUser.EmployeeID -PasswordClear "" -Class "" -OU $ThisUser.DistinguishedName -Message "Account exist but was not disabled."
+            } else {
+                AddReportEntry -LocalLocation $ReportFile.toString() -Status "Audit Suspension" -DisplayName $ThisUser.DisplayName -UserName $ThisUser.SAMAccountName -Email $ThisUser.mail -StudentID $ThisUser.EmployeeID -PasswordClear "" -Class "" -OU $ThisUser.DistinguishedName -Message "Account exist but was not disabled."
+            }
         }
     }
 
@@ -372,6 +420,15 @@ Try {
     Clear-Host
     Write-Host "Downloading from SFTP . . ."
     DownloadStudentCSV -SFTPServer $Settings.SFTPServer -SFTPPort $Settings.SFTPPort -SFTPUsername $Settings.SFTPUsername -SFTPPassword $Settings.SFTPPassword -SFTPLocation $Settings.SFTPFile -LocalLocation $StudentInfoFile.ToString() | Out-Null
+    try {
+        if ((Get-Content $StudentInfoFile).Length -le 10) {
+            Write-Host "ERROR - Not enough data in student file."
+            Exit
+        }
+    } Catch {
+        Write-Host "Error - Cannot read student data file."
+        Exit
+    }
 } Catch {
     Write-Host $_
 }
@@ -393,10 +450,10 @@ CreateReport -LocalLocation $ReportFile
 # Create Counters for Email
 $ReportProcessedAccounts = 0
 $global:ReportErrorsLogged = 0
-$ReportFailuresLogged = 0
-$ReportCreatedAccounts = 0
-$ReportDisabledAccounts = 0
-$ReportEnabledPrevious = 0
+$global:ReportFailuresLogged = 0
+$global:ReportCreatedAccounts = 0
+$global:ReportDisabledAccounts = 0
+$global:ReportEnabledPrevious = 0
 
 # Create Arrays for Suspension
 $EnrolledUsers = @()
@@ -480,22 +537,22 @@ ForEach($Student in $StudentInfo) {
     # 1=F.L  2=L.F  3=FL  4=LF  5=F_L  6=L_F
     Switch($SAMUsernameFormat) {
         "1" { 
-                $UserPrincipalName = $FirstName.ToLower() + '.' + $LastName.ToLower()  + "@" + $StudentADDomain.ToString().ToLower() 
+                $UserPrincipalName = $FirstName.ToLower()+'.'+$LastName.ToLower()+"@"+$StudentADDomain.ToString().ToLower() 
             }
         "2" { 
-                $UserPrincipalName = $LastName.ToLower() + '.' + $FirstName.ToLower() + "@" + $StudentADDomain.ToString().ToLower()
+                $UserPrincipalName = $LastName.ToLower()+'.'+$FirstName.ToLower()+"@"+$StudentADDomain.ToString().ToLower()
             }
         "3" {
-                $UserPrincipalName = $FirstName.ToLower() + $LastName.ToLower() + "@" + $StudentADDomain.ToString().ToLower()
+                $UserPrincipalName = $FirstName.ToLower()+$LastName.ToLower()+"@"+$StudentADDomain.ToString().ToLower()
             }
         "4" {
-                $UserPrincipalName = $LastName.ToLower() + $FirstName.ToLower() + "@" + $StudentADDomain.ToString().ToLower()
+                $UserPrincipalName = $LastName.ToLower()+$FirstName.ToLower()+"@"+$StudentADDomain.ToString().ToLower()
             }
         "5" {
-                $UserPrincipalName = $FirstName.ToLower() + '_' + $LastName.ToLower() + "@" + $StudentADDomain.ToString().ToLower()
+                $UserPrincipalName = $FirstName.ToLower()+'_'+$LastName.ToLower()+"@"+$StudentADDomain.ToString().ToLower()
             }
         "6" {
-                $UserPrincipalName = $LastName.ToLower() + '_' + $FirstName.ToLower() + "@" + $StudentADDomain.ToString().ToLower()
+                $UserPrincipalName = $LastName.ToLower()+'_'+$FirstName.ToLower()+"@"+$StudentADDomain.ToString().ToLower()
             }
         default {
                 Write-Host "Please select a proper email format"
@@ -543,22 +600,22 @@ ForEach($Student in $StudentInfo) {
     # 1=F.L  2=L.F  3=FL  4=LF  5=F_L  6=L_F
     Switch($EmailUsernameFormat) {
         "1" { 
-                $EmailAddress = $FirstName.ToLower() + '.' + $LastName.ToLower() + "@" + $StudentEmailDomain.ToString().ToLower()
+                $EmailAddress = $FirstName.ToLower()+'.'+$LastName.ToLower()+"@"+$StudentEmailDomain.ToString().ToLower()
             }
         "2" { 
-                $EmailAddress = $LastName.ToLower() + '.' + $FirstName.ToLower() + "@" + $StudentEmailDomain.ToString().ToLower()
+                $EmailAddress = $LastName.ToLower()+'.'+$FirstName.ToLower()+"@"+$StudentEmailDomain.ToString().ToLower()
             }
         "3" {
-                $EmailAddress = $FirstName.ToLower() + $LastName.ToLower() + "@" + $StudentEmailDomain.ToString().ToLower()
+                $EmailAddress = $FirstName.ToLower()+$LastName.ToLower()+"@"+$StudentEmailDomain.ToString().ToLower()
             }
         "4" {
-                $EmailAddress = $LastName.ToLower() + $FirstName.ToLower() + "@" + $StudentEmailDomain.ToString().ToLower()
+                $EmailAddress = $LastName.ToLower()+$FirstName.ToLower()+"@"+$StudentEmailDomain.ToString().ToLower()
             }
         "5" {
-                $EmailAddress = $FirstName.ToLower() + '_' + $LastName.ToLower() + "@" + $StudentEmailDomain.ToString().ToLower()
+                $EmailAddress = $FirstName.ToLower()+'_'+$LastName.ToLower()+"@"+$StudentEmailDomain.ToString().ToLower()
             }
         "6" {
-                $EmailAddress = $LastName.ToLower() + '_' + $FirstName.ToLower() + "@" + $StudentEmailDomain.ToString().ToLower()
+                $EmailAddress = $LastName.ToLower()+'_'+$FirstName.ToLower()+"@"+$StudentEmailDomain.ToString().ToLower()
             }
         default {
                 Write-Host "Please select a proper email format"
@@ -574,16 +631,16 @@ ForEach($Student in $StudentInfo) {
                 $StudentPasswordClear = $StudentID
             }
         "2" {
-                $StudentPasswordClear = $FirstName.Substring(0,1) + $LastName.Substring(0,1) + $StudentID
+                $StudentPasswordClear = $FirstName.Substring(0,1)+$LastName.Substring(0,1)+$StudentID
             }
         "3" {
-                $StudentPasswordClear = $LastName.Substring(0,1) + $FirstName.Substring(0,1) + $StudentID
+                $StudentPasswordClear = $LastName.Substring(0,1)+$FirstName.Substring(0,1)+$StudentID
             }
         "4" {
-                $StudentPasswordClear = $FirstName.Substring(0,2) + $LastName.Substring(0,2) + $StudentID
+                $StudentPasswordClear = $FirstName.Substring(0,2)+$LastName.Substring(0,2)+$StudentID
             }
         "5" {
-                $StudentPasswordClear = $LastName.Substring(0,2) + $FirstName.Substring(0,2) + $StudentID
+                $StudentPasswordClear = $LastName.Substring(0,2)+$FirstName.Substring(0,2)+$StudentID
             }
         "6" {
                 $StudentPasswordClear = $SpecificDefaultPassword
@@ -628,11 +685,27 @@ ForEach($Student in $StudentInfo) {
     <# END Create New user Object #>
 
     # Check if user exist.
-    if ((CheckExistingStudent -SAMUsername $SAMUsername) -eq $false) {
+    $StudentCheck = CheckExistingStudent -SAMUsername $SAMUsername
+    if ($StudentCheck -eq "Disabled"){
+        CheckPreviousUnenrolled -NewStudentAccount $NewStudentAccount
+    } elseif ($StudentCheck -eq "Enabled") {
+        # Something
+    } elseif ($StudentCheck -eq $false)  {
         CreateNewStudentAccount -NewStudentAccount $NewStudentAccount
     } else {
-        CheckPreviousUnenrolled -NewStudentAccount $NewStudentAccount
+        Write-Host "Something Went Wrong"
     }
+
+    <#
+    if ((CheckExistingStudent -SAMUsername $SAMUsername) -eq $false) {
+        CreateNewStudentAccount -NewStudentAccount $NewStudentAccount
+    } elseif((CheckExistingStudent -SAMUsername $SAMUsername) -eq "Disabled"){
+        Write-Host "FOUND DISABLED STUDENT $SAMUsername"
+        CheckPreviousUnenrolled -NewStudentAccount $NewStudentAccount
+    } else {
+        Write-Host $(CheckExistingStudent -SAMUsername $SAMUsername).toString()
+    }
+    #>
 
 }
 
@@ -657,6 +730,11 @@ $EmailBody =@"
 <h2 style="color:#000">Open Roster AD Sync Results</h2>
 <table style="color:#000">
 <tr><td style="width:160px">Total Processed Students</td><td>$ReportProcessedAccounts</td></tr>
+<tr><td style="width:160px">Created Accounts</td><td>$global:ReportCreatedAccounts</td></tr>
+<tr><td style="width:160px">Re-Enabled Accounts</td><td>$global:ReportEnabledPrevious</td></tr>
+<tr><td style="width:160px">Disabled Accounts</td><td>$global:ReportDisabledAccounts</td></tr>
+<tr><td style="width:160px">Total Errors</td><td>$global:ReportErrorsLogged</td></tr>
+<tr><td style="width:160px">Total Failures</td><td>$global:ReportFailuresLogged</td></tr>
 <tr><td colspan="2"></td></tr>
 <tr><td colspan="2">$StatusMessage</td></tr>
 </table>
@@ -688,11 +766,11 @@ While($CacheLocked) {
 # CLI Status Report
 $ReportCLI = New-Object -TypeName psobject
 $ReportCLI | Add-Member -NotePropertyName "Processed Accounts" -NotePropertyValue $ReportProcessedAccounts
-$ReportCLI | Add-Member -NotePropertyName "Created Accounts" -NotePropertyValue $ReportCreatedAccounts
-$ReportCLI | Add-Member -NotePropertyName "Enabled Accounts" -NotePropertyValue $ReportEnabledPrevious
-$ReportCLI | Add-Member -NotePropertyName "Disabled Accounts" -NotePropertyValue $ReportDisabledAccounts
+$ReportCLI | Add-Member -NotePropertyName "Created Accounts" -NotePropertyValue $global:ReportCreatedAccounts
+$ReportCLI | Add-Member -NotePropertyName "Enabled Accounts" -NotePropertyValue $global:ReportEnabledPrevious
+$ReportCLI | Add-Member -NotePropertyName "Disabled Accounts" -NotePropertyValue $global:ReportDisabledAccounts
 $ReportCLI | Add-Member -NotePropertyName "Errors" -NotePropertyValue $global:ReportErrorsLogged
-$ReportCLI | Add-Member -NotePropertyName "Failures" -NotePropertyValue $ReportFailuresLogged
+$ReportCLI | Add-Member -NotePropertyName "Failures" -NotePropertyValue $global:ReportFailuresLogged
 
 # Output Report
 Write-Host "`n`nOpen Roster AD Sync Results"
