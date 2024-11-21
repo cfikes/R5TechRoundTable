@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 
 Creates Active Directory Student Accounts from a SFTP sourced Open Roster Compliant Students CSV
@@ -170,25 +170,63 @@ function AddReportEntry() {
 
 #
 # Check if student already exist
-function CheckExistingStudent(){
+function CheckExistingStudent() {
     param (
-        $SAMUsername
+        [string]$SAMUsername,
+        [string]$TGrade,
+        [string]$TEmployeeID,
+        [int]$TClassOfYear
     )
-    
     try {
-        # Check If User Exist
-        $UserAlreadyExist = Get-ADUser -Identity "$SAMUsername" -Properties Enabled
-        #$UserAlreadyExistCount = $UserAlreadyExist | Measure-Object | Select-Object -ExpandProperty Count
-        # Build Boolean response
-        if ($UserAlreadyExist.Enabled -eq $false) {
-            return "Disabled"
-        } elseif ($UserAlreadyExist.Enabled -eq $true) {0
-            return "Enabled"
+        # Build the expected OU fragment dynamically
+        $ExpectedOUFragment = "*OU=$OUModifier*$TClassOfYear*"
+        
+        # Retrieve the user and their properties
+        $UserAlreadyExist = Get-ADUser -Identity $SAMUsername -Properties Enabled, DistinguishedName, EmployeeID, DisplayName, mail
+        
+        if (-not $UserAlreadyExist) {
+            return "Not Found"
+        }
+
+        # Check if the user is enabled or disabled
+        if ($UserAlreadyExist.Enabled -eq $false -and $UserAlreadyExist.EmployeeID -eq $TEmployeeID) {
+            $Status = "Disabled"
+            return $Status
+        } elseif ($UserAlreadyExist.Enabled -eq $true -and $UserAlreadyExist.EmployeeID -eq $TEmployeeID) {
+            $Status = "Enabled"
+        } elseif ($UserAlreadyExist.Enabled -eq $true -and $UserAlreadyExist.EmployeeID -ne $TEmployeeID) {
+            $Status = "Mismatch"
+            return $Status
         } else {
-            return $false
+            $Status = "ERROR"
+            return $Status
+        }
+
+        # Check for Wrong OU
+        if ($UserAlreadyExist.DistinguishedName -like "*$ExpectedOUFragment*") {
+            return $Status
+        } elseif ($Settings.EnableMove -eq $true) {
+            # If in incorrect OU, search for the expected OU in the directory
+            $CorrectOU = Get-ADOrganizationalUnit -Filter * | Where-Object { $_.DistinguishedName -like "*OU=$OUModifier*$TClassOfYear*" } | Select-Object -ExpandProperty DistinguishedName -ErrorAction SilentlyContinue
+            if ($CorrectOU.Count -gt 0 -and $CorrectOU.Count -lt 2) {
+                try {
+                    Move-ADObject -Identity $UserAlreadyExist.DistinguishedName -TargetPath $CorrectOU
+                    AddReportEntry -LocalLocation $ReportFile.toString() -Status "Moved" -Username $SAMUsername -DisplayName $UserAlreadyExist.DisplayName -Email $UserAlreadyExist.mail -StudentID $UserAlreadyExist.EmployeeID -PasswordClear "" -Class "$TClassOfYear" -OU $UserAlreadyExist.DistinguishedName -Message "Moved to Correct OU"
+                } catch {
+                    AddReportEntry -LocalLocation $ReportFile.toString() -Status "Error Moving" -Username $SAMUsername -DisplayName $UserAlreadyExist.DisplayName -Email $UserAlreadyExist.mail -StudentID $UserAlreadyExist.EmployeeID -PasswordClear "" -Class "$TClassOfYear" -OU $UserAlreadyExist.DistinguishedName -Message "Moved to Correct OU"
+                }
+                return $Status
+            } else {
+                AddReportEntry -LocalLocation $ReportFile.toString() -Status "Error - Wrong OU Detected" -Username $SAMUsername -DisplayName $UserAlreadyExist.DisplayName -Email $UserAlreadyExist.mail -StudentID $UserAlreadyExist.EmployeeID -PasswordClear "" -Class "$TClassOfYear" -OU $UserAlreadyExist.DistinguishedName -Message "Correct OU could not be determined."
+                return $Status
+            }
+        } else {
+            AddReportEntry -LocalLocation $ReportFile.toString() -Status "AUDIT - Wrong OU Detected" -Username $SAMUsername -DisplayName $UserAlreadyExist.DisplayName -Email $UserAlreadyExist.mail -StudentID $UserAlreadyExist.EmployeeID -PasswordClear "" -Class "$TClassOfYear" -OU $UserAlreadyExist.DistinguishedName -Message "Wrong OU Detected"
+            return $Status
         }
     }
     catch {
+        write-host $_
         return $false
     }
 }
@@ -571,7 +609,7 @@ ForEach($Student in $StudentInfo) {
     $CurrentYear = (Get-Date).Year
     $CurrentMonth = (Get-Date).Month
     # Correct Mid Semester Calculation
-    if ( $CurrentMonth -gt 6) {
+    if ( $CurrentMonth -gt 5) {
         $CurrentYear = $CurrentYear + 1
     }
     # Make Adjustments for Lettered Grades
@@ -584,6 +622,7 @@ ForEach($Student in $StudentInfo) {
     } else {
         $ClassOfYear = $CurrentYear + 12 - $Grade
     }
+
     # Convert correction to String
 	$ClassOfYear = $ClassOfYear.ToString();
 
@@ -685,7 +724,7 @@ ForEach($Student in $StudentInfo) {
     <# END Create New user Object #>
 
     # Check if user exist.
-    $StudentCheck = CheckExistingStudent -SAMUsername $SAMUsername
+    $StudentCheck = CheckExistingStudent -SAMUsername $SAMUsername -TGrade $Grade -TEmployeeID $EmployeeID -TClassOfYear $ClassOfYear
     if ($StudentCheck -eq "Disabled"){
         CheckPreviousUnenrolled -NewStudentAccount $NewStudentAccount
     } elseif ($StudentCheck -eq "Enabled") {
@@ -693,20 +732,8 @@ ForEach($Student in $StudentInfo) {
     } elseif ($StudentCheck -eq $false)  {
         CreateNewStudentAccount -NewStudentAccount $NewStudentAccount
     } else {
-        Write-Host "Something Went Wrong"
+        Write-Host "Something Went Wrong - $StudentCheck - $SAMUsername - $Grade - $EmployeeID - $ClassOfYear"
     }
-
-    <#
-    if ((CheckExistingStudent -SAMUsername $SAMUsername) -eq $false) {
-        CreateNewStudentAccount -NewStudentAccount $NewStudentAccount
-    } elseif((CheckExistingStudent -SAMUsername $SAMUsername) -eq "Disabled"){
-        Write-Host "FOUND DISABLED STUDENT $SAMUsername"
-        CheckPreviousUnenrolled -NewStudentAccount $NewStudentAccount
-    } else {
-        Write-Host $(CheckExistingStudent -SAMUsername $SAMUsername).toString()
-    }
-    #>
-
 }
 
 # Unenrolled Accounts

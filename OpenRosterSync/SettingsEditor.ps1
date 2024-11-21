@@ -53,6 +53,12 @@ function RefreshForm(){
         $MainWindow.FindName("EnableCreation").IsChecked = $false
     }
     
+    if ($Settings.EnableMove -eq $true){
+        $MainWindow.FindName("EnableMove").IsChecked = $true
+    } else {
+        $MainWindow.FindName("EnableMove").IsChecked = $false
+    }
+
     if ($Settings.EnableSuspension -eq $true){
         $MainWindow.FindName("EnableSuspension").IsChecked = $true
     } else {
@@ -101,6 +107,7 @@ function GenerateNewSettings(){
     $Settings | Add-Member -NotePropertyName DefaultGroup -NotePropertyValue ""
     $Settings | Add-Member -NotePropertyName HomeDir -NotePropertyValue ""
     $Settings | Add-Member -NotePropertyName EnableCreation -NotePropertyValue true
+    $Settings | Add-Member -NotePropertyName EnableMove -NotePropertyValue false
     $Settings | Add-Member -NotePropertyName EnableSuspension -NotePropertyValue false
     $Settings | Add-Member -NotePropertyName SMTPServer -NotePropertyValue "smtp.gmail.com"
     $Settings | Add-Member -NotePropertyName SMTPSSLEnable -NotePropertyValue true
@@ -141,6 +148,12 @@ function SaveSettings(){
             $Settings | Add-Member -NotePropertyName EnableCreation -NotePropertyValue true 
         } else {
             $Settings | Add-Member -NotePropertyName EnableCreation -NotePropertyValue false
+        }
+
+        if ($MainWindow.FindName("EnableMove").IsChecked -eq $true){
+            $Settings | Add-Member -NotePropertyName EnableMove -NotePropertyValue true 
+        } else {
+            $Settings | Add-Member -NotePropertyName EnableMove -NotePropertyValue false
         }
         
         if ($MainWindow.FindName("EnableSuspension").IsChecked -eq $true){
