@@ -106,7 +106,11 @@ function EmailReport() {
     # SMTP Settings
     $SMTP = new-object Net.Mail.SmtpClient($SMTPServer,$SMTPPort)
     $SMTP.EnableSsl = $SMTPSSL
-    $SMTP.Credentials = New-Object System.Net.NetworkCredential($SMTPUsername,$SMTPPassword)
+
+    if ($Settings.SMTPAuth -eq $true) {
+        $SMTP.Credentials = New-Object System.Net.NetworkCredential($SMTPUsername,$SMTPPassword)
+    }
+    
     try {
         $SMTP.Send($Message)
     } catch {
@@ -803,6 +807,8 @@ $ReportCLI | Add-Member -NotePropertyName "Failures" -NotePropertyValue $global:
 Write-Host "`n`nOpen Roster AD Sync Results"
 $ReportCLI 
 Write-host $StatusMessage "`n`n"
+
+
 
 
 # Move Report

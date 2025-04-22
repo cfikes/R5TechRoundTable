@@ -5,9 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp1"
         mc:Ignorable="d"
-        Title="Open Roster Student Account Sync Tool" Height="463.5" Width="464" MinWidth="464" MinHeight="435" ResizeMode="NoResize">
+        Title="Clever Student Account Sync Tool" Height="510" Width="464" MinWidth="464" MinHeight="485" ResizeMode="NoResize">
     <Grid>
-        <TabControl HorizontalAlignment="Left" Height="371" Margin="10,10,0,0" VerticalAlignment="Top" Width="437">
+        <TabControl HorizontalAlignment="Left" Height="400" Margin="10,10,0,0" VerticalAlignment="Top" Width="437">
             <TabItem Header="Local Settings">
                 <Grid Background="#FFE5E5E5">
                     <Grid.ColumnDefinitions>
@@ -52,6 +52,7 @@
                     <Label Content="Specified Password" HorizontalAlignment="Left" Margin="115,188,0,0" VerticalAlignment="Top" Width="192" Grid.Column="1"/>
                     <TextBox x:Name="DefaultPassword" HorizontalAlignment="Left" Height="24" Margin="115,219,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="192" Grid.Column="1"/>
                     <CheckBox x:Name="EnableCreation" Content="Enable Account Creation" HorizontalAlignment="Left" Margin="10,318,0,0" VerticalAlignment="Top" Width="192" Grid.ColumnSpan="2"/>
+                    <CheckBox x:Name="EnableMove" Content="Enable OU Movement" HorizontalAlignment="Left" Margin="10,346,0,0" VerticalAlignment="Top" Width="192" Grid.ColumnSpan="2"/>
                     <Label Content="Home Directory Root" HorizontalAlignment="Left" Margin="10,247,0,0" VerticalAlignment="Top" Width="192" Grid.ColumnSpan="2"/>
                     <TextBox x:Name="HomeDir" HorizontalAlignment="Left" Height="23" Margin="10,278,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="192" Grid.ColumnSpan="2"/>
                     <Label Content="Default Group" Grid.Column="1" HorizontalAlignment="Left" Margin="114.5,248,0,0" VerticalAlignment="Top" Width="192"/>
@@ -80,6 +81,7 @@
                     <Label Content="SMTP Port" HorizontalAlignment="Left" Margin="230,10,0,0" VerticalAlignment="Top" Width="192"/>
                     <TextBox x:Name="SMTPPort" HorizontalAlignment="Left" Height="23" Margin="230,41,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="192"/>
                     <CheckBox x:Name="SMTPSSLEnable" HorizontalAlignment="Left" Margin="10,69,0,0" VerticalAlignment="Top" Width="192" Content="Use SSL"/>
+                    <CheckBox x:Name="SMTPAuth" HorizontalAlignment="Left" Margin="230,69,0,0" VerticalAlignment="Top" Width="192" Content="Enable Authentication"/>
                     <Label Content="SMTP Username" HorizontalAlignment="Left" Margin="10,89,0,0" VerticalAlignment="Top" Width="192"/>
                     <TextBox x:Name="SMTPUsername" HorizontalAlignment="Left" Height="23" Margin="10,120,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="192"/>
                     <Label Content="SMTP Password" HorizontalAlignment="Left" Margin="230,89,0,0" VerticalAlignment="Top" Width="192"/>
@@ -98,8 +100,8 @@
                 </Grid>
             </TabItem>
         </TabControl>
-        <Button x:Name="SaveButton" Content="Save Settings" HorizontalAlignment="Left" Margin="10,386,0,0" VerticalAlignment="Top" Width="192" Height="35" />
-        <TextBlock x:Name="StatusMessage" HorizontalAlignment="Left" Margin="230,394,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="192" Height="24" TextAlignment="Center"/>
+        <Button x:Name="SaveButton" Content="Save Settings" HorizontalAlignment="Left" Margin="10,422,0,0" VerticalAlignment="Top" Width="192" Height="35" />
+        <TextBlock x:Name="StatusMessage" HorizontalAlignment="Left" Margin="230,434,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="192" Height="24" TextAlignment="Center"/>
 
     </Grid>
 </Window>

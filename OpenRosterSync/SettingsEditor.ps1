@@ -91,6 +91,12 @@ function RefreshForm(){
     } else {
         $MainWindow.FindName("SMTPEnable").IsChecked = $false
     }
+
+    if($Settings.SMTPAuth -eq $true) {
+        $MainWindow.FindName("SMTPAuth").IsChecked = $true
+    } else {
+        $MainWindow.FindName("SMTPAuth").IsChecked = $false
+    }
 }
 
 
@@ -168,6 +174,12 @@ function SaveSettings(){
             $Settings | Add-Member -NotePropertyName SMTPSSLEnable -NotePropertyValue true
         } else {
             $Settings | Add-Member -NotePropertyName SMTPSSLEnable -NotePropertyValue false
+        }
+
+        if($MainWindow.FindName("SMTPAuth").IsChecked -eq $true) {
+            $Settings | Add-Member -NotePropertyName SMTPAuth -NotePropertyValue true
+        } else {
+            $Settings | Add-Member -NotePropertyName SMTPAuth -NotePropertyValue false
         }
         
         $Settings | Add-Member -NotePropertyName SMTPPort -NotePropertyValue $MainWindow.FindName("SMTPPort").Text
